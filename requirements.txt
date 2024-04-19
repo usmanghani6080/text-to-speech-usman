@@ -1,2 +1,4 @@
 git+https://github.com/huggingface/parler-tts.git
 fastapi[all]
+
+#will add some other libraries
