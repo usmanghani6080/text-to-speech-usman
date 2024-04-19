@@ -6,6 +6,7 @@ import soundfile as sf
 import tempfile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from starlette.background import BackgroundTask
 
 app = FastAPI()
 
@@ -18,6 +19,12 @@ tokenizer = AutoTokenizer.from_pretrained("parler-tts/parler_tts_mini_v0.1")
 class SynthesizeRequest(BaseModel):
     prompt: str
     description: str
+
+
+def cleanup():
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
 
 
 @app.post("/generate")
@@ -34,7 +41,7 @@ async def synthesize_text(request: SynthesizeRequest):
             tmp_filename = tmp_file.name
             sf.write(tmp_filename, audio_arr, model.config.sampling_rate)
 
-        return FileResponse(tmp_filename, media_type='audio/wav')
+        return FileResponse(tmp_filename, media_type='audio/wav', background=BackgroundTask(cleanup))
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -43,4 +50,3 @@ async def synthesize_text(request: SynthesizeRequest):
 @app.get("/")
 async def read_root():
     return {"message": "Welcome to Parler TTS synthesis API. Please use the /synthesize endpoint."}
-
